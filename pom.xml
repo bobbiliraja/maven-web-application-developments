@@ -88,13 +88,13 @@
 	<distributionManagement>
 	    <repository>
 	      <id>nexus</id>
-	      <name>Mithun Technologies Releases Nexus Repository</name>
-	      <url>http://192.168.1.5:8081/repository/maven-releases/</url>
+	      <name>release</name>
+	      <url>http://3.14.80.204:8081/repository/maven-realese/</url>
 	    </repository>
 	    <snapshotRepository>
 	      <id>nexus</id>
-	      <name>Mithun Technologies Snapshot Nexus Repository </name>
-	      <url>http://192.168.1.5:8081/repository/maven-snapshots/</url>
+	      <name>snapshot</name>
+	      <url>http://3.14.80.204:8081/repository/maven-snapshot/</url>
 	    </snapshotRepository>
 	</distributionManagement>
 	
