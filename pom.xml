@@ -89,12 +89,12 @@
 	    <repository>
 	      <id>nexus</id>
 	      <name>release</name>
-	      <url>http://3.19.58.0:8081/repository/maven-realese/</url>
+	      <url>http://172.16.237.100:31596/repository/maven-release/</url>
 	    </repository>
 	    <snapshotRepository>
 	      <id>nexus</id>
 	      <name>snapshot</name>
-	      <url>http://3.19.58.0:8081/repository/maven-snapshot/</url>
+	      <url>http://172.16.237.100:31596/repository/maven-snapshot/</url>
 	    </snapshotRepository>
 	</distributionManagement>
 	
