@@ -1,61 +1,82 @@
-#!groovy
-
-properties([
-    buildDiscarder(logRotator(numToKeepStr: '2')),
-    pipelineTriggers([
-        pollSCM('* * * * *')
-    ])
-])
-
-
-node{
-    
-    stage('CheckOutCode'){
-        git branch: 'development', credentialsId: 'e36e58e1-2845-4868-92b2-aae7fcf88927', url: 'https://github.com/MithunTechnologiesDevOps/maven-web-application.git'
-    }
-    
-    stage('Build'){
-      if(isUnix()){
-          sh 'mvn clean package'
-      }else{
-          bat 'mvn clean package'
+pipeline {
+  agent {
+    label "jenkins-maven"
+  }
+  environment {
+    ORG = 'bobbiliraja'
+    APP_NAME = 'maven-web-application-developments'
+    CHARTMUSEUM_CREDS = credentials('jenkins-x-chartmuseum')
+    DOCKER_REGISTRY_ORG = 'bobbiliraja'
+  }
+  stages {
+    stage('CI Build and push snapshot') {
+      when {
+        branch 'PR-*'
+      }
+      environment {
+        PREVIEW_VERSION = "0.0.0-SNAPSHOT-$BRANCH_NAME-$BUILD_NUMBER"
+        PREVIEW_NAMESPACE = "$APP_NAME-$BRANCH_NAME".toLowerCase()
+        HELM_RELEASE = "$PREVIEW_NAMESPACE".toLowerCase()
+      }
+      steps {
+        container('maven') {
+          sh "mvn versions:set -DnewVersion=$PREVIEW_VERSION"
+          sh "mvn install"
+          sh "skaffold version"
+          sh "export VERSION=$PREVIEW_VERSION && skaffold build -f skaffold.yaml"
+          sh "jx step post build --image $DOCKER_REGISTRY/$ORG/$APP_NAME:$PREVIEW_VERSION"
+          dir('charts/preview') {
+            sh "make preview"
+            sh "jx preview --app $APP_NAME --dir ../.."
+          }
+        }
       }
     }
-    /*
-    stage('SonarQubeReport'){
-      if(isUnix()){
-          sh 'mvn  sonar:sonar'
-      }else{
-          bat 'mvn sonar:sonar'
+    stage('Build Release') {
+      when {
+        branch 'master'
       }
-    }
-    
-     stage('UploadintoNexus'){
-      if(isUnix()){
-          sh 'mvn  deploy'
-      }else{
-          bat 'mvn deploy'
-      }
-    }
-    stage('DeployAppIntoTomcat'){
-        sh 'echo App is deploying into tomcat server'
-        sh 'cp $WORKSPACE/target/maven-web-application.war /Users/mithunreddy/MithunTechnologies/Softwares/Running/apache-tomcat-9.0.14/webapps/'
-        sh 'echo Deployed the into Tomcat successsfully' 
-    }
-    */
-    stage('SendEmailNotification'){
-        mail bcc: 'devopstrainingblr@gmail.com', body: '''Build Done.
+      steps {
+        container('maven') {
 
-        Regards,
-        Mithun Technologies,
-        9980923226.
-        ''', cc: 'devopstrainingblr@gmail.com', from: 'devopstrainingblr@gmail.com', replyTo: 'devopstrainingblr@gmail.com', subject: 'Duild done', to: 'devopstrainingblr@gmail.com'
+          // ensure we're not on a detached head
+          sh "git checkout master"
+          sh "git config --global credential.helper store"
+          sh "jx step git credentials"
+
+          // so we can retrieve the version in later steps
+          sh "echo \$(jx-release-version) > VERSION"
+          sh "mvn versions:set -DnewVersion=\$(cat VERSION)"
+          sh "jx step tag --version \$(cat VERSION)"
+          sh "mvn clean deploy"
+          sh "skaffold version"
+          sh "export VERSION=`cat VERSION` && skaffold build -f skaffold.yaml"
+          sh "jx step post build --image $DOCKER_REGISTRY/$ORG/$APP_NAME:\$(cat VERSION)"
+        }
+      }
     }
-    
-    stage('SendSlackNotifications'){
-        
-        slackSend baseUrl: 'https://devops-team-bangalore.slack.com/services/hooks/jenkins-ci/', channel: 'build-notification', color: 'black', message: 'Build sent to Slack', tokenCredentialId: '9558055f-b9e7-485a-a61c-898e24fa0678'
+    stage('Promote to Environments') {
+      when {
+        branch 'master'
+      }
+      steps {
+        container('maven') {
+          dir('charts/maven-web-application-developments') {
+            sh "jx step changelog --version v\$(cat ../../VERSION)"
+
+            // release the helm chart
+            sh "jx step helm release"
+
+            // promote through all 'Auto' promotion Environments
+            sh "jx promote -b --all-auto --timeout 1h --version \$(cat ../../VERSION)"
+          }
+        }
+      }
     }
-    
-    
+  }
+  post {
+        always {
+          cleanWs()
+        }
+  }
 }
