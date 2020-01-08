@@ -13,8 +13,8 @@
 	<description>Maven Web Project</description>
 
 	<organization>
-		<name>Mithun Technologies</name>
-		<url>http://mithuntechnologies.com/</url>
+		<name>Test Technologies</name>
+		<url>http://testtechnologies.com/</url>
 	</organization>
 
 	<properties>
