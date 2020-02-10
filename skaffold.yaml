@@ -2,7 +2,7 @@ apiVersion: skaffold/v1beta2
 kind: Config
 build:
   artifacts:
-  - image: bobbiliraja/maven-web-application-developments
+  - image: docker-registry.jx.192.168.56.104.nip.io:32675/bobbili
     context: .
     docker: {}
   tagPolicy:
