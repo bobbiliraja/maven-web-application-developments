@@ -12,6 +12,8 @@ spec:
 {{- else }}
   replicas: {{ .Values.replicaCount }}
 {{- end }}
+  strategy:
+    type: RollingUpdate
   template:
     metadata:
       labels:
